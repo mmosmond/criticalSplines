@@ -1,0 +1,7 @@
+*.nb
+main.*
+*_analysis.R
+IMAGES/
+.Rhistory
+.Rapp.history
+.RData
