@@ -80,8 +80,6 @@ server <- function(input, output) {
   
   myData <- reactive({
     
-    inFile <- input$file1
-    
     if(input$test_data) {
       #if use test data then use phenotype and fitness data pulled from Vedder et al. 2013 PLoS Biol. 11(7):1001605, supplementary figure 1
       phenotype <- c(-18, -14, -10, -6, -2, 2, 6, 10, 14, 18) #phenotype (mean of bin)
@@ -89,12 +87,12 @@ server <- function(input, output) {
       data <- data.frame(phenotype, fitness) #combine to data frame
     } else {
       # req(input$file1)
-      # inFile <- input$file1
-      data<-read.csv(inFile$datapath, header=input$header)
-      data<-data[,-1]
+      inFile <- input$file1
+      data <- read.csv(inFile$datapath, header=input$header)
     }
 
-    data$log_fitness <- log(data$fitness) #add log fitness as column
+    data[,3] <- log(data[,2]) #add log fitness as column
+    names(data) <- c('phenotype', 'fitness', 'log_fitness')
     data
     
   })
@@ -117,12 +115,10 @@ server <- function(input, output) {
   output$fits <- renderPlot({
     
     data <- myData()
-    phenotype <- data[,1]
-    log_fitness <- data[,2]
     
     # phenotype <- data
     # #x-values for plotting and derivatives
-    x <- seq(min(phenotype), max(phenotype), (max(phenotype)-min(phenotype))/params$nx) #divide up the x-axis
+    x <- with(data, seq(min(phenotype), max(phenotype), (max(phenotype)-min(phenotype))/params$nx)) #divide up the x-axis
     
     #fit a quadratic and get strength of selection and optimum
     nlsfit <- nls(log_fitness ~ a - (b - phenotype)^2 / (2*c^2), data, start=list(a=0,b=1,c=0.1)) #fit quadratic over data to get QG parameters
