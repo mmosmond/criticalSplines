@@ -5,3 +5,4 @@ IMAGES/
 .Rhistory
 .Rapp.history
 .RData
+*.sh
