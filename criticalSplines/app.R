@@ -24,11 +24,11 @@ ui <- fluidPage(
       numericInput("B", "Environmental sensitivity (slope of optimum trait vs. environmental variable):", -5.30),
       numericInput("b", "Plasticity (slope of trait vs. environmental variable):", -4.98),
       
-      # helpText("Enter plotting ranges:"),      
-      # numericInput("min_rate", "Minimum rate of change to plot:", -2),
-      # numericInput("max_rate", "Maximum rate of change to plot:", 1),
-      # numericInput("min_growth", "Minimum growth rate to plot:", -0.1),
-      # numericInput("max_growth", "Maximum growth rate to plot:", 0.5),
+      helpText("Enter plotting ranges:"),
+      numericInput("min_rate", "Minimum rate of change to plot:", -1),
+      numericInput("max_rate", "Maximum rate of change to plot:", 1),
+      numericInput("min_growth", "Minimum growth rate to plot:", -0.1),
+      numericInput("max_growth", "Maximum growth rate to plot:", 0.5),
       
       helpText("Use test data (great tit laying data and spring temperature; Vedder et al 2013 PLoS Biol) or input your own."),  
       checkboxInput("test_data", "Use test data", TRUE),
@@ -174,10 +174,10 @@ server <- function(input, output) {
     params$b <- input$b #plasticity (slope of expressed phenotype vs environmental variable)
     
     #plot limits
-    # params$min_rate = input$min_rate
-    # params$max_rate = input$max_rate
-    # params$min_growth = input$min_growth
-    # params$max_growth = input$max_growth
+    params$min_rate = input$min_rate
+    params$max_rate = input$max_rate
+    params$min_growth = input$min_growth
+    params$max_growth = input$max_growth
     
   })
   
@@ -418,8 +418,8 @@ server <- function(input, output) {
     #steady state lag as a function of the rate of environmental change
     xmin = min(c(quad_opt - q.d.cis$x, spline_opt - sp.d.cis$x))
     xmax = max(c(quad_opt - q.d.cis$x, spline_opt - sp.d.cis$x))
-    ymin = -0.75
-    ymax = 0.75
+    ymin = params$min_rate
+    ymax = params$max_rate
     plot = 
       ggplot() +
       geom_line(data = q.d.cis, aes(x = quad_opt - x, y = evo_scale * main.curve), colour="red", size=1) +
@@ -765,10 +765,10 @@ server <- function(input, output) {
     neg.sp.rates <- which(evo_scale * sp.d.cis$main.curve < 0)
     
     #rate of popn growth as a function of the rate of environmental change
-    xmin = -0.1
-    xmax = input$rmax
-    ymin = -0.75
-    ymax = 0.75
+    xmin = params$min_growth
+    xmax = params$max_growth
+    ymin = params$min_rate
+    ymax = params$max_rate
     plot =
       ggplot() +
       geom_path(data = q.d.cis, aes(x = params$rmax - (quad_max - pred_quad)/params$gT, y = evo_scale * main.curve), colour="red", size=1) +
