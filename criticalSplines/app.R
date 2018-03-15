@@ -2,6 +2,7 @@ library(shiny)
 library(splines)
 library(ggplot2)
 library(scales)
+library(dplyr)
 
 # Define UI ----
 ui <- fluidPage(
@@ -761,9 +762,12 @@ server <- function(input, output) {
     #separate the positive and negative rates of change so that we have two functions for each fit, allowing geom_ribbon to work (requires a function, like geom_line)
     pos.q.rates <- which(evo_scale * q.d.cis$main.curve >= 0)
     neg.q.rates <- which(evo_scale * q.d.cis$main.curve < 0)
-    pos.sp.rates <- which(evo_scale * sp.d.cis$main.curve >= 0)
-    neg.sp.rates <- which(evo_scale * sp.d.cis$main.curve < 0)
-    
+    # pos.sp.rates <- which(evo_scale * sp.d.cis$main.curve >= 0)
+    # neg.sp.rates <- which(evo_scale * sp.d.cis$main.curve < 0)
+    #this is not actually enough if the fitness is not unimodal (causing an increase in growth rate at some non-zero lag)
+    change.sign <- which(diff(sign(sp.d.cis$main.curve))^2==4) #where does the derivative change sign?
+    n.sign.changes <- length(change.sign) #how many sign changes are there?
+        
     #rate of popn growth as a function of the rate of environmental change
     xmin = params$min_growth
     xmax = params$max_growth
@@ -775,8 +779,8 @@ server <- function(input, output) {
       geom_ribbon(aes(x = params$rmax - (quad_max - pred_quad[pos.q.rates])/params$gT, ymin = evo_scale * q.d.cis$lower.ci[pos.q.rates], ymax = evo_scale * q.d.cis$upper.ci[pos.q.rates]), fill="red", alpha="0.5") +
       geom_ribbon(aes(x = params$rmax - (quad_max - pred_quad[neg.q.rates])/params$gT, ymin = evo_scale * q.d.cis$lower.ci[neg.q.rates], ymax = evo_scale * q.d.cis$upper.ci[neg.q.rates]), fill="red", alpha="0.5") +
       # geom_path(data = sp.d.cis, aes(x = input$rmax - (spline_max - pred_spline)/input$gT, y = evo_scale * main.curve), colour="blue") +
-      geom_ribbon(aes(x = params$rmax - (spline_max - pred_spline[pos.sp.rates])/params$gT, ymin = evo_scale * sp.d.cis$lower.ci[pos.sp.rates], ymax = evo_scale * sp.d.cis$upper.ci[pos.sp.rates]), fill="blue", alpha="0.5") +
-      geom_ribbon(aes(x = params$rmax - (spline_max - pred_spline[neg.sp.rates])/params$gT, ymin = evo_scale * sp.d.cis$lower.ci[neg.sp.rates], ymax = evo_scale * sp.d.cis$upper.ci[neg.sp.rates]), fill="blue", alpha="0.5") +
+      # geom_ribbon(aes(x = params$rmax - (spline_max - pred_spline[pos.sp.rates])/params$gT, ymin = evo_scale * sp.d.cis$lower.ci[pos.sp.rates], ymax = evo_scale * sp.d.cis$upper.ci[pos.sp.rates]), fill="blue", alpha="0.5") +
+      # geom_ribbon(aes(x = params$rmax - (spline_max - pred_spline[neg.sp.rates])/params$gT, ymin = evo_scale * sp.d.cis$lower.ci[neg.sp.rates], ymax = evo_scale * sp.d.cis$upper.ci[neg.sp.rates]), fill="blue", alpha="0.5") +
       labs(x = 'long-term mean Malthusian growth rate', y = 'rate of environmental change') +
       theme_bw() + 
       theme(panel.border= element_blank()) +
@@ -787,6 +791,24 @@ server <- function(input, output) {
       annotate("text", x = xmax, y = ymax, label = "~underline('max sustainable rates')", parse = TRUE, hjust=1, vjust = 0, color="black") +
       annotate("text", x = xmax, y = ymin, label = "~underline('min sustainable rates')", parse = TRUE, hjust=0, vjust = 0, color="black") +
       coord_flip()
+    #add spline CIs
+    if(n.sign.changes == 0) {
+      #if no sign changes then can just plot as single ribbon function
+      plot = plot + 
+        geom_ribbon(aes(x = params$rmax - (spline_max - pred_spline)/params$gT, ymin = evo_scale * sp.d.cis$lower.ci, ymax = evo_scale * sp.d.cis$upper.ci), fill="blue", alpha="0.5") 
+    } else {
+      #make ribbon function for each section of same sign (so that all are true functions)
+      k <- 1
+      for(i in 1:(n.sign.changes)) {
+        gg.data <- data.frame(x = params$rmax - (spline_max - pred_spline[k:change.sign[i]])/params$gT, ymin = evo_scale * sp.d.cis$lower.ci[k:change.sign[i]], ymax = evo_scale * sp.d.cis$upper.ci[k:change.sign[i]])
+        plot = plot + 
+          geom_ribbon(data = gg.data, aes(x = x, ymin = ymin, ymax = ymax), fill="blue", alpha="0.5")
+        k <- change.sign[i]
+      }
+      gg.data <- data.frame(x = params$rmax - (spline_max - pred_spline[k:length(pred_spline)])/params$gT, ymin = evo_scale * sp.d.cis$lower.ci[k:length(pred_spline)], ymax = evo_scale * sp.d.cis$upper.ci[k:length(pred_spline)])
+      plot = plot + 
+        geom_ribbon(data = gg.data, aes(x = x, ymin = ymin, ymax = ymax), fill="blue", alpha="0.5")
+    }
     #plot spline over positive lags
     if(pos_nmaxs == 0) {
       #if no maxs then just plot solid curve over all lags
