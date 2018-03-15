@@ -250,6 +250,9 @@ server <- function(input, output) {
     q.cis <- as.data.frame(quad.cis(data, x, B=params$bs, alpha=0.05))
     sp.cis <- as.data.frame(spline.cis(data, x, B=params$bs, alpha=0.05))
     
+    #where are our zeros (negative infinity on log scale)?
+    zeros <- data[data$fitness==0,]$phenotype    
+    
     #plot on log scale with confidence intervals
     ggplot() +
       geom_point(data = data, aes(x = phenotype, y = fitness), colour = "gray") +
@@ -261,13 +264,14 @@ server <- function(input, output) {
       # geom_line(data = sp.cis, aes(x = x, y = lower.ci), colour="blue", lty=2) +
       # geom_line(data = sp.cis, aes(x = x, y = upper.ci), colour="blue", lty=2) +
       geom_ribbon(data = sp.cis, aes(x = x, ymin = lower.ci, ymax = upper.ci), fill = "blue", alpha = "0.5") +
-      scale_y_continuous(trans = log_trans(), breaks = c(1, 10, 100, 1000, 10000)) +
+      scale_y_continuous(trans = log_trans(), breaks = c(0.01, 0.1, 1, 10, 100, 1000, 10000)) +
       labs(x = 'phenotype', y = 'fitness (log scale)') + 
       theme_bw() + 
       theme(panel.border = element_blank()) + 
       annotate("text", x = max(x), y = max(data$fitness), label = "quadratic", hjust = 1, vjust = 0, color = "red") +
-      annotate("text", x = max(x), y = max(data$fitness), label = "spline", hjust = 1, vjust = 2, color = "blue")
-      
+      annotate("text", x = max(x), y = max(data$fitness), label = "spline", hjust = 1, vjust = 2, color = "blue") +
+      geom_rug(mapping=aes(x=zeros)) #map the zeros
+    
   })
    
   output$lag <- renderPlot({
